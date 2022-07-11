@@ -4,6 +4,7 @@ import "log"
 import "net"
 import "os"
 import "sync"
+import "time"
 import "net/rpc"
 import "net/http"
 
@@ -16,6 +17,7 @@ type Coordinator struct {
 	reduceStatus []int // 0表示未分配，1表示已分配，2表示已成功
 	mapDone bool
 	reduceDone bool
+	// timeout time.Time
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -55,6 +57,7 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 				reply.type = "map"
 				reply.file = file
 				c.fileStatus[id] = 1 // todo: 检测超时
+				// c.timeout = time.Now()
 				break
 			}
 		}
@@ -65,6 +68,7 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 				reply.id = id
 				reply.type = "reduce"
 				c.fileStatus[id] = 1 // todo: 检测超时
+				// c.timeout = time.Now()
 				break
 			}
 		}
@@ -74,6 +78,18 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 
 	return nil
 }
+
+// func (c *Coordinator) timeoutRecover(type string, id int) {
+// 	time.Sleep(60 * time.Second)
+
+// 	c.mu.Lock()
+// 	if (type == "map" && c.fileStatus[id] == 1) {
+// 		c.fileStatus[id] = 0
+// 	} else if (type == "reduce" && c.reduceStatus[id] == 1) {
+// 		c.reduceStatus[id] == 0
+// 	}
+// 	c.mu.Unlock()
+// }
 
 //
 // start a thread that listens for RPCs from worker.go
