@@ -46,13 +46,13 @@ func Worker(mapf func(string, string) []KeyValue,
 func CallExample() {
 
 	// declare an argument structure.
-	args := ExampleArgs{}
+	args := RpcArgs{}
 
 	// fill in the argument(s).
 	args.X = 99
 
 	// declare a reply structure.
-	reply := ExampleReply{}
+	reply := RpcReply{}
 
 	// send the RPC request, wait for the reply.
 	call("Coordinator.Example", &args, &reply)

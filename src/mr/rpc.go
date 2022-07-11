@@ -14,12 +14,15 @@ import "strconv"
 // and reply for an RPC.
 //
 
-type ExampleArgs struct {
-	X int
+type RpcArgs struct {
+	id int
+	type string // map or reduce
 }
 
-type ExampleReply struct {
-	Y int
+type RpcReply struct {
+	id int
+	type string // map/reduce/wait/done
+	file string
 }
 
 // Add your RPC definitions here.
