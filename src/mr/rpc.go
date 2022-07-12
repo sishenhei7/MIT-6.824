@@ -23,6 +23,7 @@ type RpcReply struct {
 	id int
 	type string // map/reduce/wait/done
 	file string
+	nReduce int
 }
 
 // Add your RPC definitions here.
