@@ -3,6 +3,7 @@ package mr
 import "fmt"
 import "log"
 import "time"
+import "strconv"
 import "net/rpc"
 import "hash/fnv"
 
@@ -14,6 +15,14 @@ type KeyValue struct {
 	Key   string
 	Value string
 }
+
+// for sorting by key.
+type ByKey []mr.KeyValue
+
+// for sorting by key.
+func (a ByKey) Len() int           { return len(a) }
+func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 //
 // use ihash(key) % NReduce to choose the reduce
@@ -51,15 +60,21 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 	}
 }
 
-func doMapWork(id: int, file: string, nReduce: int, mapf func(string, string) []KeyValue) {
+func readFile(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalf("cannot open %v", filename)
 	}
+	content, err := ioutil.ReadAll(file)
 	if err != nil {
 		log.Fatalf("cannot read %v", filename)
 	}
 	file.Close()
+	return content
+}
+
+func doMapWork(id int, file string, nReduce int, mapf func(string, string) []KeyValue) {
+	content := readFile(file)
 	kva := mapf(filename, string(content))
 	intermediate := []mr.KeyValue{}
 	intermediate = append(intermediate, kva...)
@@ -67,7 +82,7 @@ func doMapWork(id: int, file: string, nReduce: int, mapf func(string, string) []
 	i := 0
 	fileList := make([]*json.Encoder, nReduce)
 	for i < nReduce {
-		fileList[i] = json.NewEncoder("mr-" + id + "-" + i)
+		fileList[i] = json.NewEncoder("mr-" + strconv.Itoa(id) + "-" + strconv.Itoa(i))
 	}
 
 	for _, kv := range intermediate {
@@ -76,8 +91,51 @@ func doMapWork(id: int, file: string, nReduce: int, mapf func(string, string) []
 	}
 }
 
-func doReduceWork(id: int, nReduce: int, reducef func(string, []string) string) {
+func readJSONFile(filename string) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("cannot open %v", filename)
+	}
+	dec := json.NewDecoder(file)
 
+	var kva := []KeyValue{}
+	for {
+    var kv KeyValue
+    if err := dec.Decode(&kv); err != nil {
+      break
+    }
+    kva = append(kva, kv)
+  }
+	return kva
+}
+
+func doReduceWork(id int, nReduce int, reducef func(string, []string) string) {
+	intermediate := readJSONFile("mr-*-" + strconv.Itoa(id))
+	sort.Sort(ByKey(intermediate))
+	oname := "mr-out-" + strconv.Itoa(id)
+	ofile, _ := os.Create(oname)
+
+	// call Reduce on each distinct key in intermediate[],
+	// and print the result to mr-out-0.
+	i := 0
+	for i < len(intermediate) {
+		j := i + 1
+		for j < len(intermediate) && intermediate[j].Key == intermediate[i].Key {
+			j++
+		}
+		values := []string{}
+		for k := i; k < j; k++ {
+			values = append(values, intermediate[k].Value)
+		}
+		output := reducef(intermediate[i].Key, values)
+
+		// this is the correct format for each line of Reduce output.
+		fmt.Fprintf(ofile, "%v %v\n", intermediate[i].Key, output)
+
+		i = j
+	}
+
+	ofile.Close()
 }
 
 //
@@ -85,7 +143,7 @@ func doReduceWork(id: int, nReduce: int, reducef func(string, []string) string) 
 //
 // the RPC argument and reply types are defined in rpc.go.
 //
-func CallWork(id: int, type: string) {
+func CallWork(id int, type string) {
 
 	// declare an argument structure.
 	args := RpcArgs{}
