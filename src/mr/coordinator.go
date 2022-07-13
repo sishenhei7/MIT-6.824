@@ -39,37 +39,37 @@ func checkEvery(list []int, target int) bool {
 func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 	c.mu.Lock()
 
-	if (args.name == "map") {
-		c.fileStatus[args.id] = 2
+	if (args.Name == "map") {
+		c.fileStatus[args.Id] = 2
 		c.mapDone = checkEvery(c.fileStatus, 2)
-	} else if (args.name == "reduce") {
-		c.reduceStatus[args.id] = 2
+	} else if (args.Name == "reduce") {
+		c.reduceStatus[args.Id] = 2
 		c.reduceDone = checkEvery(c.fileStatus, 2)
 	}
 
-	reply.name = "done"
-	reply.nReduce = c.nReduce
+	reply.Name = "done"
+	reply.NReduce = c.nReduce
 
 	if (!c.mapDone) {
-		reply.name = "wait"
+		reply.Name = "wait"
 		for id, file := range c.files {
 			if (c.fileStatus[id] == 0) {
-				reply.id = id
-				reply.name = "map"
-				reply.file = file
+				reply.Id = id
+				reply.Name = "map"
+				reply.File = file
 				c.fileStatus[id] = 1 // todo: 检测超时
-				go c.timeoutRecover(reply.name, reply.id)
+				go c.timeoutRecover(reply.Name, reply.Id)
 				break
 			}
 		}
 	} else if (!c.reduceDone) {
-		reply.name = "wait"
+		reply.Name = "wait"
 		for id, val := range c.reduceStatus {
 			if (val == 0) {
-				reply.id = id
-				reply.name = "reduce"
+				reply.Id = id
+				reply.Name = "reduce"
 				c.fileStatus[id] = 1 // todo: 检测超时
-				go c.timeoutRecover(reply.name, reply.id)
+				go c.timeoutRecover(reply.Name, reply.Id)
 				break
 			}
 		}

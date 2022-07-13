@@ -50,13 +50,13 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 	reply := CallWork(0, "")
 
 	for {
-		if (reply.name == "map") {
-			doMapWork(reply.id, reply.file, reply.nReduce, mapf)
-			reply = CallWork(reply.id, "map")
-		} else if (reply.name == "reduce") {
-			doReduceWork(reply.id, reply.nReduce, reducef)
-			reply = CallWork(reply.id, "reduce")
-		} else if (reply.name == "wait") {
+		if (reply.Name == "map") {
+			doMapWork(reply.Id, reply.File, reply.NReduce, mapf)
+			reply = CallWork(reply.Id, "map")
+		} else if (reply.Name == "reduce") {
+			doReduceWork(reply.Id, reply.NReduce, reducef)
+			reply = CallWork(reply.Id, "reduce")
+		} else if (reply.Name == "wait") {
 			time.Sleep(5 * time.Second)
 		} else {
 			break
@@ -155,8 +155,8 @@ func CallWork(id int, name string) RpcReply {
 	args := RpcArgs{}
 
 	// fill in the argument(s).
-	args.id = id
-	args.name = name
+	args.Id = id
+	args.Name = name
 
 	// declare a reply structure.
 	reply := RpcReply{}

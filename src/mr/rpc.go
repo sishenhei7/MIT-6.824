@@ -15,15 +15,15 @@ import "strconv"
 //
 
 type RpcArgs struct {
-	id int
-	name string // map or reduce
+	Id int
+	Name string // map or reduce
 }
 
 type RpcReply struct {
-	id int
-	name string // map/reduce/wait/done
-	file string
-	nReduce int
+	Id int
+	Name string // map/reduce/wait/done
+	File string
+	NReduce int
 }
 
 // Add your RPC definitions here.
