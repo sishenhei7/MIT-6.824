@@ -17,6 +17,7 @@ type Coordinator struct {
 	reduceStatus []int // 0表示未分配，1表示已分配，2表示已成功
 	mapDone bool
 	reduceDone bool
+	nReduce int
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -26,7 +27,7 @@ type Coordinator struct {
 //
 // the RPC argument and reply types are defined in rpc.go.
 //
-func checkEvery(list int[], target int) bool {
+func checkEvery(list []int, target int) bool {
 	for _, val := range list {
 		if (val != target) {
 			return false
@@ -38,36 +39,37 @@ func checkEvery(list int[], target int) bool {
 func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 	c.mu.Lock()
 
-	if (args.type == "map") {
+	if (args.name == "map") {
 		c.fileStatus[args.id] = 2
 		c.mapDone = checkEvery(c.fileStatus, 2)
-	} else if (args.type == "reduce") {
+	} else if (args.name == "reduce") {
 		c.reduceStatus[args.id] = 2
 		c.reduceDone = checkEvery(c.fileStatus, 2)
 	}
 
-	reply := RpcReply{0, "done", '', c.nReduce}
+	reply.name = "done"
+	reply.nReduce = c.nReduce
 
 	if (!c.mapDone) {
-		reply.type = "wait"
+		reply.name = "wait"
 		for id, file := range c.files {
 			if (c.fileStatus[id] == 0) {
 				reply.id = id
-				reply.type = "map"
+				reply.name = "map"
 				reply.file = file
 				c.fileStatus[id] = 1 // todo: 检测超时
-				go c.timeoutRecover(reply.type, reply.id)
+				go c.timeoutRecover(reply.name, reply.id)
 				break
 			}
 		}
 	} else if (!c.reduceDone) {
-		reply.type = "wait"
+		reply.name = "wait"
 		for id, val := range c.reduceStatus {
 			if (val == 0) {
 				reply.id = id
-				reply.type = "reduce"
+				reply.name = "reduce"
 				c.fileStatus[id] = 1 // todo: 检测超时
-				go c.timeoutRecover(reply.type, reply.id)
+				go c.timeoutRecover(reply.name, reply.id)
 				break
 			}
 		}
@@ -78,14 +80,14 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 	return nil
 }
 
-func (c *Coordinator) timeoutRecover(type string, id int) {
+func (c *Coordinator) timeoutRecover(name string, id int) {
 	time.Sleep(60 * time.Second)
 
 	c.mu.Lock()
-	if (type == "map" && c.fileStatus[id] == 1) {
+	if (name == "map" && c.fileStatus[id] == 1) {
 		c.fileStatus[id] = 0
-	} else if (type == "reduce" && c.reduceStatus[id] == 1) {
-		c.reduceStatus[id] == 0
+	} else if (name == "reduce" && c.reduceStatus[id] == 1) {
+		c.reduceStatus[id] = 0
 	}
 	c.mu.Unlock()
 }

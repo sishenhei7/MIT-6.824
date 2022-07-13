@@ -16,12 +16,12 @@ import "strconv"
 
 type RpcArgs struct {
 	id int
-	type string // map or reduce
+	name string // map or reduce
 }
 
 type RpcReply struct {
 	id int
-	type string // map/reduce/wait/done
+	name string // map/reduce/wait/done
 	file string
 	nReduce int
 }
