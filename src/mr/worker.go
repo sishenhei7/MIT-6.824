@@ -180,8 +180,7 @@ func CallWork(id int, name string) RpcReply {
 	// send the RPC request, wait for the reply.
 	call("Coordinator.Work", &args, &reply)
 
-	// print, _ := json.Marshal(reply)
-	// fmt.Println("callwork: " + string(print))
+	fmt.Printf("callwork: %+v \n", reply)
 
 	return reply
 }
