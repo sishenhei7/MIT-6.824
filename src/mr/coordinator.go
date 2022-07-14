@@ -44,7 +44,7 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 		c.mapDone = checkEvery(c.fileStatus, 2)
 	} else if (args.Name == "reduce") {
 		c.reduceStatus[args.Id] = 2
-		c.reduceDone = checkEvery(c.fileStatus, 2)
+		c.reduceDone = checkEvery(c.reduceStatus, 2)
 	}
 
 	reply.Name = "done"
@@ -57,7 +57,7 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 				reply.Id = id
 				reply.Name = "map"
 				reply.File = file
-				c.fileStatus[id] = 1 // todo: 检测超时
+				c.fileStatus[id] = 1
 				go c.timeoutRecover(reply.Name, reply.Id)
 				break
 			}
@@ -68,7 +68,7 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 			if (val == 0) {
 				reply.Id = id
 				reply.Name = "reduce"
-				c.fileStatus[id] = 1 // todo: 检测超时
+				c.reduceStatus[id] = 1
 				go c.timeoutRecover(reply.Name, reply.Id)
 				break
 			}
@@ -116,7 +116,9 @@ func (c *Coordinator) Done() bool {
 	ret := false
 
 	// Your code here.
+	c.mu.Lock()
 	ret = c.reduceDone
+	c.mu.Unlock()
 
 	return ret
 }
