@@ -58,7 +58,8 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			doReduceWork(reply.Id, reply.NReduce, reducef)
 			reply = CallWork(reply.Id, "reduce")
 		} else if (reply.Name == "wait") {
-			time.Sleep(5 * time.Second)
+			time.Sleep(1 * time.Second)
+			reply = CallWork(0, "")
 		} else {
 			break
 		}
