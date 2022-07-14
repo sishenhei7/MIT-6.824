@@ -12,6 +12,9 @@ import "hash/fnv"
 import "encoding/json"
 import "path/filepath"
 
+const (
+	SleepTime = time.Second * 1
+)
 
 //
 // Map functions return a slice of KeyValue.
@@ -58,7 +61,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			doReduceWork(reply.Id, reply.NReduce, reducef)
 			reply = CallWork(reply.Id, "reduce")
 		} else if (reply.Name == "wait") {
-			time.Sleep(1 * time.Second)
+			time.Sleep(SleepTime)
 			reply = CallWork(0, "")
 		} else {
 			break

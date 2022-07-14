@@ -8,6 +8,15 @@ import "time"
 import "net/rpc"
 import "net/http"
 
+const (
+	MaxTaskRunTime = time.Second * 5
+)
+
+const (
+	TaskWaiting = 0
+	TaskRunning = 1
+	TaskDone    = 2
+)
 
 type Coordinator struct {
 	// Your definitions here.
@@ -27,9 +36,9 @@ type Coordinator struct {
 //
 // the RPC argument and reply types are defined in rpc.go.
 //
-func checkEvery(list []int, target int) bool {
+func checkDone(list []int) bool {
 	for _, val := range list {
-		if (val != target) {
+		if (val != TaskDone) {
 			return false
 		}
 	}
@@ -40,11 +49,11 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 	c.mu.Lock()
 
 	if (args.Name == "map") {
-		c.fileStatus[args.Id] = 2
-		c.mapDone = checkEvery(c.fileStatus, 2)
+		c.fileStatus[args.Id] = TaskDone
+		c.mapDone = checkDone(c.fileStatus)
 	} else if (args.Name == "reduce") {
-		c.reduceStatus[args.Id] = 2
-		c.reduceDone = checkEvery(c.reduceStatus, 2)
+		c.reduceStatus[args.Id] = TaskDone
+		c.reduceDone = checkDone(c.reduceStatus)
 	}
 
 	reply.Name = "done"
@@ -53,11 +62,11 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 	if (!c.mapDone) {
 		reply.Name = "wait"
 		for id, file := range c.files {
-			if (c.fileStatus[id] == 0) {
+			if (c.fileStatus[id] == TaskWaiting) {
 				reply.Id = id
 				reply.Name = "map"
 				reply.File = file
-				c.fileStatus[id] = 1
+				c.fileStatus[id] = TaskRunning
 				go c.timeoutRecover(reply.Name, reply.Id)
 				break
 			}
@@ -65,10 +74,10 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 	} else if (!c.reduceDone) {
 		reply.Name = "wait"
 		for id, val := range c.reduceStatus {
-			if (val == 0) {
+			if (val == TaskWaiting) {
 				reply.Id = id
 				reply.Name = "reduce"
-				c.reduceStatus[id] = 1
+				c.reduceStatus[id] = TaskRunning
 				go c.timeoutRecover(reply.Name, reply.Id)
 				break
 			}
@@ -81,13 +90,13 @@ func (c *Coordinator) Work(args *RpcArgs, reply *RpcReply) error {
 }
 
 func (c *Coordinator) timeoutRecover(name string, id int) {
-	time.Sleep(60 * time.Second)
+	time.Sleep(MaxTaskRunTime)
 
 	c.mu.Lock()
-	if (name == "map" && c.fileStatus[id] == 1) {
-		c.fileStatus[id] = 0
-	} else if (name == "reduce" && c.reduceStatus[id] == 1) {
-		c.reduceStatus[id] = 0
+	if (name == "map" && c.fileStatus[id] == TaskRunning) {
+		c.fileStatus[id] = TaskWaiting
+	} else if (name == "reduce" && c.reduceStatus[id] == TaskRunning) {
+		c.reduceStatus[id] = TaskWaiting
 	}
 	c.mu.Unlock()
 }
