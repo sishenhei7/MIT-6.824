@@ -10,6 +10,7 @@ import "net/rpc"
 import "io/ioutil"
 import "hash/fnv"
 import "encoding/json"
+import "path/filepath"
 
 
 //
@@ -83,40 +84,51 @@ func doMapWork(id int, filename string, nReduce int, mapf func(string, string) [
 	intermediate := []KeyValue{}
 	intermediate = append(intermediate, kva...)
 
-	i := 0
-	fileList := make([]*json.Encoder, nReduce)
-	for i < nReduce {
-		file, _ := os.Create("mr-" + strconv.Itoa(id) + "-" + strconv.Itoa(i))
-		fileList[i] = json.NewEncoder(file)
-		defer file.Close()
-	}
-
+	dataList := make([][]KeyValue, nReduce)
 	for _, kv := range intermediate {
 		idx := ihash(kv.Key) % nReduce
-		fileList[idx].Encode(&kv)
+		dataList[idx] = append(dataList[idx], kv)
+	}
+
+	for idx, kvList := range dataList {
+		file, _ := os.Create("mr-" + strconv.Itoa(id) + "-" + strconv.Itoa(idx) + ".json")
+		enc := json.NewEncoder(file)
+		for _, kv := range kvList {
+			err := enc.Encode(&kv)
+			if err != nil {
+				log.Fatalf("cannot map Reduce in file %v", idx)
+			}
+		}
+		file.Close()
 	}
 }
 
 func readJSONFile(filename string) []KeyValue {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatalf("cannot open %v", filename)
-	}
-	dec := json.NewDecoder(file)
-
 	kva := []KeyValue{}
-	for {
-    var kv KeyValue
-    if err := dec.Decode(&kv); err != nil {
-      break
-    }
-    kva = append(kva, kv)
-  }
+
+	matches, _ := filepath.Glob(filename)
+	for _, f := range matches {
+		file, err := os.Open(f)
+		if err != nil {
+			log.Fatalf("cannot open %v", f)
+		}
+		dec := json.NewDecoder(file)
+
+		for {
+			var kv KeyValue
+			if err := dec.Decode(&kv); err != nil {
+				break
+			}
+			kva = append(kva, kv)
+		}
+		file.Close()
+	}
+
 	return kva
 }
 
 func doReduceWork(id int, nReduce int, reducef func(string, []string) string) {
-	intermediate := readJSONFile("mr-*-" + strconv.Itoa(id))
+	intermediate := readJSONFile("mr-*-" + strconv.Itoa(id) + ".json")
 	sort.Sort(ByKey(intermediate))
 	oname := "mr-out-" + strconv.Itoa(id)
 	ofile, _ := os.Create(oname)
@@ -163,6 +175,9 @@ func CallWork(id int, name string) RpcReply {
 
 	// send the RPC request, wait for the reply.
 	call("Coordinator.Work", &args, &reply)
+
+	print, _ := json.Marshal(reply)
+	fmt.Println("callwork: " + string(print))
 
 	return reply
 }
