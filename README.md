@@ -14,7 +14,7 @@
 
 ## 进度
 
-- [ ] lab1 MapReduce([link](http://nil.csail.mit.edu/6.824/2021/labs/lab-mr.html))
+- [x] lab1 MapReduce([link](http://nil.csail.mit.edu/6.824/2021/labs/lab-mr.html))
 - [ ] lab2 Raft([link](http://nil.csail.mit.edu/6.824/2021/labs/lab-raft.html))
 - [ ] lab3 Fault-tolerant Key/Value Service([link](http://nil.csail.mit.edu/6.824/2021/labs/lab-kvraft.html))
 - [ ] lab4 Sharded Key/Value Service([link](http://nil.csail.mit.edu/6.824/2021/labs/lab-shard.html))
